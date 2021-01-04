@@ -136,3 +136,6 @@ replay_buffers/*
 
 # Vscode
 .vscode/
+
+# wandb
+wandb/
