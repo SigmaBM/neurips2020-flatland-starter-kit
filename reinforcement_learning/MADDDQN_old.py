@@ -172,7 +172,7 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
 
     # TensorBoard writer
     current_time = datetime.now().strftime('%b%d_%H-%M-%S')
-    log_dir = os.path.join(os.path.join('train_log', 'madddqn'), current_time + '_' + socket.gethostname())
+    log_dir = os.path.join(os.path.join('train_log', 'madddqn_old'), current_time + '_' + socket.gethostname())
     writer = SummaryWriter(log_dir=log_dir)
     writer.add_hparams(vars(train_params), {})
     writer.add_hparams(vars(train_env_params), {})
