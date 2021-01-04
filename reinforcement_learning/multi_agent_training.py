@@ -158,15 +158,15 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
             policy.load_replay_buffer(restore_replay_buffer)
             policy.test()
         except RuntimeError as e:
-            print("\n🛑 Could't load replay buffer, were the experiences generated using the same tree depth?")
+            print("\n Could't load replay buffer, were the experiences generated using the same tree depth?")
             print(e)
             exit(1)
 
-    print("\n💾 Replay buffer status: {}/{} experiences".format(len(policy.memory.memory), train_params.buffer_size))
+    print("\n Replay buffer status: {}/{} experiences".format(len(policy.memory.memory), train_params.buffer_size))
 
     hdd = psutil.disk_usage('/')
     if save_replay_buffer and (hdd.free / (2 ** 30)) < 500.0:
-        print("⚠️  Careful! Saving replay buffers will quickly consume a lot of disk space. You have {:.2f}gb left.".format(hdd.free / (2 ** 30)))
+        print(" Careful! Saving replay buffers will quickly consume a lot of disk space. You have {:.2f}gb left.".format(hdd.free / (2 ** 30)))
 
     # TensorBoard writer
     writer = SummaryWriter()
@@ -177,7 +177,7 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
     training_timer = Timer()
     training_timer.start()
 
-    print("\n🚉 Training {} trains on {}x{} grid for {} episodes, evaluating on {} episodes every {} episodes. Training id '{}'.\n".format(
+    print("\n Training {} trains on {}x{} grid for {} episodes, evaluating on {} episodes every {} episodes. Training id '{}'.\n".format(
         train_env.get_num_agents(),
         x_dim, y_dim,
         n_episodes,
@@ -292,13 +292,13 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
                 env_renderer.close_window()
 
         print(
-            '\r🚂 Episode {}'
-            '\t 🏆 Score: {:.3f}'
+            '\r Episode {}'
+            '\t Score: {:.3f}'
             ' Avg: {:.3f}'
-            '\t 💯 Done: {:.2f}%'
+            '\t Done: {:.2f}%'
             ' Avg: {:.2f}%'
-            '\t 🎲 Epsilon: {:.3f} '
-            '\t 🔀 Action Probs: {}'.format(
+            '\t Epsilon: {:.3f} '
+            '\t Action Probs: {}'.format(
                 episode_idx,
                 normalized_score,
                 smoothed_normalized_score,
@@ -358,7 +358,8 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
 
 def format_action_prob(action_probs):
     action_probs = np.round(action_probs, 3)
-    actions = ["↻", "←", "↑", "→", "◼"]
+    # actions = ["↻", "←", "↑", "→", "◼"]
+    actions = ["DO_NOTHING", "MOVE_LEFT", "MOVE_FORWARD", "MOVE_RIGHT", "STOP_MOVING"]
 
     buffer = ""
     for action, action_prob in zip(actions, action_probs):
@@ -415,7 +416,7 @@ def eval_policy(env, policy, train_params, obs_params):
 
         nb_steps.append(final_step)
 
-    print("\t✅ Eval: score {:.3f} done {:.1f}%".format(np.mean(scores), np.mean(completions) * 100.0))
+    print("\t Eval: score {:.3f} done {:.1f}%".format(np.mean(scores), np.mean(completions) * 100.0))
 
     return scores, completions, nb_steps
 
@@ -489,7 +490,7 @@ if __name__ == "__main__":
 
     def check_env_config(id):
         if id >= len(env_params) or id < 0:
-            print("\n🛑 Invalid environment configuration, only Test_0 to Test_{} are supported.".format(len(env_params) - 1))
+            print("\n Invalid environment configuration, only Test_0 to Test_{} are supported.".format(len(env_params) - 1))
             exit(1)
 
 
