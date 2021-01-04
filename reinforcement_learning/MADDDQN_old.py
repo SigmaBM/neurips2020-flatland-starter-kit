@@ -6,6 +6,7 @@ import socket
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from pprint import pprint
+from tqdm import tqdm
 
 import psutil
 from flatland.utils.rendertools import RenderTool
@@ -26,7 +27,7 @@ sys.path.append(str(base_dir))
 
 from utils.timer import Timer
 from utils.observation_utils import normalize_observation
-from reinforcement_learning.dddqn_policy import DDDQNPolicy
+from reinforcement_learning.dddqn_policy_old import DDDQNPolicy
 
 try:
     import wandb
@@ -301,13 +302,13 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
                 env_renderer.close_window()
 
         print(
-            '\r Episode {}'
-            '\t Score: {:.3f}'
-            ' Avg: {:.3f}'
+            '\n Episode {}'
+            '\n Score: {:.3f}'
+            '\t Avg: {:.3f}'
             '\t Done: {:.2f}%'
-            ' Avg: {:.2f}%'
+            '\t Avg: {:.2f}%'
             '\t Epsilon: {:.3f} '
-            '\t Action Probs: {}'.format(
+            '\n Action Probs: {}'.format(
                 episode_idx,
                 normalized_score,
                 smoothed_normalized_score,
@@ -362,6 +363,7 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
         writer.add_scalar("timer/step", step_timer.get(), episode_idx)
         writer.add_scalar("timer/learn", learn_timer.get(), episode_idx)
         writer.add_scalar("timer/preproc", preproc_timer.get(), episode_idx)
+        writer.add_scalar("timer/inference", inference_timer.get(), episode_idx)
         writer.add_scalar("timer/total", training_timer.get_current(), episode_idx)
 
 
@@ -388,7 +390,8 @@ def eval_policy(env, policy, train_params, obs_params):
     completions = []
     nb_steps = []
 
-    for episode_idx in range(n_eval_episodes):
+    print("\n Evaluating begin...")
+    for episode_idx in tqdm(range(n_eval_episodes)):
         agent_obs = [None] * env.get_num_agents()
         score = 0.0
 
@@ -425,7 +428,7 @@ def eval_policy(env, policy, train_params, obs_params):
 
         nb_steps.append(final_step)
 
-    print("\t Eval: score {:.3f} done {:.1f}%".format(np.mean(scores), np.mean(completions) * 100.0))
+    print("\n Eval: score {:.3f} done {:.1f}%".format(np.mean(scores), np.mean(completions) * 100.0))
 
     return scores, completions, nb_steps
 

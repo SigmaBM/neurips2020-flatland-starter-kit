@@ -6,6 +6,7 @@ import socket
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from pprint import pprint
+from tqdm import tqdm
 
 import psutil
 from flatland.utils.rendertools import RenderTool
@@ -223,19 +224,20 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
         # Run episode
         for step in range(max_steps - 1):
             inference_timer.start()
+            # Parallize policy.act
+            actions = policy.act(np.asarray(agent_obs), eps=eps_start)
             for agent in train_env.get_agent_handles():
                 if info['action_required'][agent]:
                     update_values[agent] = True
-                    action = policy.act(agent_obs[agent], eps=eps_start)
-
-                    action_count[action] += 1
-                    actions_taken.append(action)
+                    # action = policy.act(agent_obs[agent], eps=eps_start)
+                    action_count[actions[agent]] += 1
+                    actions_taken.append(actions[agent])
                 else:
                     # An action is not required if the train hasn't joined the railway network,
                     # if it already reached its target, or if is currently malfunctioning.
                     update_values[agent] = False
-                    action = 0
-                action_dict.update({agent: action})
+                    actions[agent] = 0
+                action_dict.update({agent: actions[agent]})
             inference_timer.end()
 
             # Environment step
@@ -301,13 +303,13 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
                 env_renderer.close_window()
 
         print(
-            '\r Episode {}'
+            '\n Episode {}'
             '\t Score: {:.3f}'
-            ' Avg: {:.3f}'
+            '\t Avg: {:.3f}'
             '\t Done: {:.2f}%'
-            ' Avg: {:.2f}%'
+            '\t Avg: {:.2f}%'
             '\t Epsilon: {:.3f} '
-            '\t Action Probs: {}'.format(
+            '\n Action Probs: {}'.format(
                 episode_idx,
                 normalized_score,
                 smoothed_normalized_score,
@@ -362,6 +364,7 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
         writer.add_scalar("timer/step", step_timer.get(), episode_idx)
         writer.add_scalar("timer/learn", learn_timer.get(), episode_idx)
         writer.add_scalar("timer/preproc", preproc_timer.get(), episode_idx)
+        writer.add_scalar("timer/inference", inference_timer.get(), episode_idx)
         writer.add_scalar("timer/total", training_timer.get_current(), episode_idx)
 
 
@@ -388,7 +391,8 @@ def eval_policy(env, policy, train_params, obs_params):
     completions = []
     nb_steps = []
 
-    for episode_idx in range(n_eval_episodes):
+    print("\n Evaluating begin...")
+    for episode_idx in tqdm(range(n_eval_episodes)):
         agent_obs = [None] * env.get_num_agents()
         score = 0.0
 
@@ -401,10 +405,12 @@ def eval_policy(env, policy, train_params, obs_params):
                 if obs[agent]:
                     agent_obs[agent] = normalize_observation(obs[agent], tree_depth=tree_depth, observation_radius=observation_radius)
 
-                action = 0
-                if info['action_required'][agent]:
-                    action = policy.act(agent_obs[agent], eps=0.0)
-                action_dict.update({agent: action})
+            # Parallize policy.act
+            actions = policy.act(np.asarray(agent_obs), eps=0.0)
+            for agent in env.get_agent_handles():
+                if not info['action_required'][agent]:
+                    actions[agent] = 0
+                action_dict.update({agent: actions[agent]})
 
             obs, all_rewards, done, info = env.step(action_dict)
 
@@ -425,7 +431,7 @@ def eval_policy(env, policy, train_params, obs_params):
 
         nb_steps.append(final_step)
 
-    print("\t Eval: score {:.3f} done {:.1f}%".format(np.mean(scores), np.mean(completions) * 100.0))
+    print("\n Eval: score {:.3f} done {:.1f}%".format(np.mean(scores), np.mean(completions) * 100.0))
 
     return scores, completions, nb_steps
 
@@ -485,6 +491,17 @@ if __name__ == "__main__":
             "y_dim": 30,
             "n_cities": 3,
             "max_rails_between_cities": 2,
+            "max_rails_in_city": 3,
+            "malfunction_rate": 1 / 200,
+            "seed": 0
+        },
+        {
+            # Test_3
+            "n_agents": 100,
+            "x_dim": 80,
+            "y_dim": 120,
+            "n_cities": 21,
+            "max_rails_between_cities": 4,
             "max_rails_in_city": 3,
             "malfunction_rate": 1 / 200,
             "seed": 0

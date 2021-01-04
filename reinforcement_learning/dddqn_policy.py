@@ -54,17 +54,27 @@ class DDDQNPolicy(Policy):
             self.loss = 0.0
 
     def act(self, state, eps=0.):
-        state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
+        n_agent = state.shape[0]
+        # state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
+        state = torch.from_numpy(state).float().to(self.device)
         self.qnetwork_local.eval()
         with torch.no_grad():
-            action_values = self.qnetwork_local(state)
+            action_values = self.qnetwork_local(state).cpu().data.numpy()
         self.qnetwork_local.train()
 
         # Epsilon-greedy action selection
-        if random.random() > eps:
-            return np.argmax(action_values.cpu().data.numpy())
-        else:
-            return random.choice(np.arange(self.action_size))
+        # if random.random() > eps:
+        #     return np.argmax(action_values.cpu().data.numpy())
+        # else:
+        #     return random.choice(np.arange(self.action_size))
+        actions = []
+        for i in range(n_agent):
+            if random.random() > eps:
+                actions.append(np.argmax(action_values[i, :]))
+            else:
+                actions.append(random.choice(np.arange(self.action_size)))
+        return actions
+
 
     def step(self, state, action, reward, next_state, done):
         assert not self.evaluation_mode, "Policy has been initialized for evaluation only."
