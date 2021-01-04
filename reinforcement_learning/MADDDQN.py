@@ -29,12 +29,12 @@ from utils.timer import Timer
 from utils.observation_utils import normalize_observation
 from reinforcement_learning.dddqn_policy import DDDQNPolicy
 
-try:
-    import wandb
+# try:
+#     import wandb
 
-    wandb.init(sync_tensorboard=True)
-except ImportError:
-    print("Install wandb to log to Weights & Biases")
+#     wandb.init(sync_tensorboard=True)
+# except ImportError:
+#     print("Install wandb to log to Weights & Biases")
 
 """
 This file shows how to train multiple agents using a reinforcement learning approach.
@@ -450,13 +450,17 @@ if __name__ == "__main__":
     parser.add_argument("--buffer_min_size", help="min buffer size to start training", default=0, type=int)
     parser.add_argument("--restore_replay_buffer", help="replay buffer to restore", default="", type=str)
     parser.add_argument("--save_replay_buffer", help="save replay buffer at each evaluation interval", default=False, type=bool)
+    parser.add_argument("--per", help="prioritized experience replay", default=False, action="store_true")
+    parser.add_argument("--per_alpha", help="alpha parameter for prioritized replay buffer", default=0.6, type=float)
+    parser.add_argument("--per_beta", help="beta parameter for prioritized replay buffer", default=0.4, type=float)
+    parser.add_argument("--per_eps", help="epsilon to add to the TD errors when updating priorities", default=1e-6, type=float)
     parser.add_argument("--batch_size", help="minibatch size", default=128, type=int)
     parser.add_argument("--gamma", help="discount factor", default=0.99, type=float)
     parser.add_argument("--tau", help="soft update of target parameters", default=1e-3, type=float)
     parser.add_argument("--learning_rate", help="learning rate", default=0.5e-4, type=float)
     parser.add_argument("--hidden_size", help="hidden size (2 fc layers)", default=128, type=int)
     parser.add_argument("--update_every", help="how often to update the network", default=8, type=int)
-    parser.add_argument("--use_gpu", help="use GPU if available", default=False, type=bool)
+    parser.add_argument("--use_gpu", help="use GPU if available", default=False, action="store_true")
     parser.add_argument("--num_threads", help="number of threads PyTorch can use", default=1, type=int)
     parser.add_argument("--render", help="render 1 episode in 100", default=False, type=bool)
     training_params = parser.parse_args()
