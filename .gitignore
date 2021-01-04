@@ -127,8 +127,12 @@ scratch/test-envs/
 scratch/
 runs/
 checkpoints/
+train_log/
 
 # Checkpoints and replay buffers
 !checkpoints/.gitkeep
 replay_buffers/*
 !replay_buffers/.gitkeep
+
+# Vscode
+.vscode/
