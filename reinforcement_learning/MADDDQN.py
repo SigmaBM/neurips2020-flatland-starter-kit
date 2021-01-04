@@ -2,6 +2,7 @@ from datetime import datetime
 import os
 import random
 import sys
+import socket
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from pprint import pprint
@@ -169,10 +170,18 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
         print(" Careful! Saving replay buffers will quickly consume a lot of disk space. You have {:.2f}gb left.".format(hdd.free / (2 ** 30)))
 
     # TensorBoard writer
-    writer = SummaryWriter()
+    current_time = datetime.now().strftime('%b%d_%H-%M-%S')
+    log_dir = os.path.join(os.path.join('train_log', 'madddqn'), current_time + '_' + socket.gethostname())
+    writer = SummaryWriter(log_dir=log_dir)
     writer.add_hparams(vars(train_params), {})
     writer.add_hparams(vars(train_env_params), {})
     writer.add_hparams(vars(obs_params), {})
+
+    # Make direction for model saving and replay buffer
+    checkdir = os.path.join(log_dir, 'checkpoints')
+    bufferdir = os.path.join(log_dir, 'replay_buffers')
+    os.makedirs(checkdir, exist_ok=True)
+    os.makedirs(bufferdir, exist_ok=True)
 
     training_timer = Timer()
     training_timer.start()
@@ -283,10 +292,10 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
 
         # Print logs
         if episode_idx % checkpoint_interval == 0:
-            torch.save(policy.qnetwork_local, './checkpoints/' + training_id + '-' + str(episode_idx) + '.pth')
+            torch.save(policy.qnetwork_local, os.path.join(checkdir, training_id + '-' + str(episode_idx) + '.pth'))
 
             if save_replay_buffer:
-                policy.save_replay_buffer('./replay_buffers/' + training_id + '-' + str(episode_idx) + '.pkl')
+                policy.save_replay_buffer(os.path.join(bufferdir, training_id + '-' + str(episode_idx) + '.pkl'))
 
             if train_params.render:
                 env_renderer.close_window()
