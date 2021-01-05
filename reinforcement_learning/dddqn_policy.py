@@ -104,7 +104,7 @@ class DDDQNPolicy(Policy):
         else:
             experiences = self.memory.sample()
             states, actions, rewards, next_states, dones = experiences
-            weights = np.ones_like(rewards)
+            weights = np.ones_like(rewards.cpu().detach().numpy())
 
         # Get expected Q values from local model
         q_expected = self.qnetwork_local(states).gather(1, actions)
