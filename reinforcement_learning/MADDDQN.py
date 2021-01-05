@@ -19,7 +19,7 @@ from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.envs.schedule_generators import sparse_schedule_generator
 from flatland.envs.observations import TreeObsForRailEnv
 
-from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters
+from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters, no_malfunction_generator
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 
 base_dir = Path(__file__).resolve().parent.parent
@@ -55,11 +55,14 @@ def create_rail_env(env_params, tree_observation):
     seed = env_params.seed
 
     # Break agents from time to time
-    malfunction_parameters = MalfunctionParameters(
-        malfunction_rate=env_params.malfunction_rate,
-        min_duration=20,
-        max_duration=50
-    )
+    malfunction_generator = no_malfunction_generator()
+    if env_params.malfunction_rate > 0.:
+        malfunction_parameters = MalfunctionParameters(
+            malfunction_rate=env_params.malfunction_rate,
+            min_duration=20,
+            max_duration=50
+        )
+        malfunction_generator = malfunction_from_params(malfunction_parameters)
 
     return RailEnv(
         width=x_dim, height=y_dim,
@@ -71,7 +74,7 @@ def create_rail_env(env_params, tree_observation):
         ),
         schedule_generator=sparse_schedule_generator(),
         number_of_agents=n_agents,
-        malfunction_generator_and_process_data=malfunction_from_params(malfunction_parameters),
+        malfunction_generator_and_process_data=malfunction_generator,
         obs_builder_object=tree_observation,
         random_seed=seed
     )
@@ -510,6 +513,17 @@ if __name__ == "__main__":
             "malfunction_rate": 1 / 200,
             "seed": 0
         },
+        {
+            # Test 4: small_v0
+            "n_agents": 5,
+            "x_dim": 25,
+            "y_dim": 25,
+            "n_cities": 4,
+            "max_rails_between_cities": 2,
+            "max_rails_in_city": 3,
+            "malfunction_rate": 0,
+            "seed": 0,
+        }
     ]
 
     obs_params = {
