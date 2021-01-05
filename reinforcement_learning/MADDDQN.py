@@ -88,7 +88,7 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
     n_cities = train_env_params.n_cities
     max_rails_between_cities = train_env_params.max_rails_between_cities
     max_rails_in_city = train_env_params.max_rails_in_city
-    seed = train_env_params.seed
+    # seed = train_env_params.seed
 
     # Unique ID for this training
     now = datetime.now()
@@ -110,6 +110,7 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
     save_replay_buffer = train_params.save_replay_buffer
 
     # Set the seeds
+    seed = train_params.seed
     random.seed(seed)
     np.random.seed(seed)
 
@@ -444,6 +445,7 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--n_episodes", help="number of episodes to run", default=2500, type=int)
     parser.add_argument("-t", "--training_env_config", help="training config id (eg 0 for Test_0)", default=0, type=int)
     parser.add_argument("-e", "--evaluation_env_config", help="evaluation config id (eg 0 for Test_0)", default=0, type=int)
+    parser.add_argument("-s", "--seed", help="training random seed", default=0, type=int)
     parser.add_argument("--n_evaluation_episodes", help="number of evaluation episodes", default=25, type=int)
     parser.add_argument("--checkpoint_interval", help="checkpoint interval", default=100, type=int)
     parser.add_argument("--eps_start", help="max exploration", default=1.0, type=float)
