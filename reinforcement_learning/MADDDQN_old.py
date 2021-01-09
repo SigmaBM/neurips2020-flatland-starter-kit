@@ -492,6 +492,17 @@ if __name__ == "__main__":
             "malfunction_rate": 1 / 200,
             "seed": 0
         },
+        {
+            # Test 4: small_v0
+            "n_agents": 5,
+            "x_dim": 25,
+            "y_dim": 25,
+            "n_cities": 4,
+            "max_rails_between_cities": 2,
+            "max_rails_in_city": 3,
+            "malfunction_rate": 0,
+            "seed": 0,
+        }
     ]
 
     obs_params = {
