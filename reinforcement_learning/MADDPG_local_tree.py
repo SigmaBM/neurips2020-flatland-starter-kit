@@ -468,7 +468,7 @@ if __name__ == "__main__":
     parser.add_argument("--eps_start", help="max exploration", default=1.0, type=float)
     parser.add_argument("--eps_end", help="min exploration", default=0.01, type=float)
     parser.add_argument("--eps_decay", help="exploration decay", default=0.99, type=float)
-    parser.add_argument("--buffer_size", help="replay buffer size", default=int(2e5), type=int)
+    parser.add_argument("--buffer_size", help="replay buffer size", default=int(5e5), type=int)
     parser.add_argument("--buffer_min_size", help="min buffer size to start training", default=0, type=int)
     parser.add_argument("--restore_replay_buffer", help="replay buffer to restore", default="", type=str)
     parser.add_argument("--save_replay_buffer", help="save replay buffer at each evaluation interval", default=False, type=bool)
