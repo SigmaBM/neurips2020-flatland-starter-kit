@@ -1,3 +1,5 @@
+import torch
+import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -29,3 +31,36 @@ class DuelingQNetwork(nn.Module):
         adv = self.fc4_adv(adv)
 
         return val + adv - adv.mean()
+
+
+class Actor(nn.Module):
+    def __init__(self, ob_size, ac_size, hid_size=128):
+        super().__init__()
+
+        # policy network (only for discrete action space)
+        self.fc1_pi = nn.Linear(ob_size, hid_size)
+        self.fc2_pi = nn.Linear(hid_size, hid_size)
+        self.fc3_pi = nn.Linear(hid_size, ac_size)
+    
+    def forward(self, obs):
+        pi = F.relu(self.fc1_pi(obs))
+        pi = F.relu(self.fc2_pi(pi))
+        pi = self.fc3_pi(pi)
+
+        return pi
+
+
+class LocalCritic(nn.Module):
+    def __init__(self, ob_size, ac_size, hid_size=128):
+        super().__init__()
+
+        self.fc1_q = nn.Linear(ob_size + ac_size, hid_size)
+        self.fc2_q = nn.Linear(hid_size, hid_size)
+        self.fc3_q = nn.Linear(hid_size, 1)
+
+    def forward(self, obs, acts):
+        q = F.relu(self.fc1_q(torch.cat((obs, acts), dim=1)))
+        q = F.relu(self.fc2_q(q))
+        q = self.fc3_q(q)
+
+        return q
