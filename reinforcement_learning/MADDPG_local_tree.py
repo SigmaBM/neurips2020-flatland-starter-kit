@@ -269,7 +269,10 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
             # Update replay buffer
             for agent in train_env.get_agent_handles():
                 agent_action_one_hot = np.eye(action_size)[agent_prev_action[agent]]
-                policies[agent].update_memory(agent_prev_obs[agent], agent_action_one_hot, all_rewards[agent], agent_obs[agent], done[agent])
+                if train_params.mask_memory:
+                    policies[agent].update_memory(agent_prev_obs[agent], agent_action_one_hot, all_rewards[agent], agent_obs[agent], done[agent], update_values[agent])
+                else:
+                    policies[agent].update_memory(agent_prev_obs[agent], agent_action_one_hot, all_rewards[agent], agent_obs[agent], done[agent])
 
             for agent in train_env.get_agent_handles():
                 learn_timer.start()
@@ -373,11 +376,11 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
         writer.add_scalar("actions/forward", action_probs[RailEnvActions.MOVE_FORWARD], episode_idx)
         writer.add_scalar("actions/right", action_probs[RailEnvActions.MOVE_RIGHT], episode_idx)
         writer.add_scalar("actions/stop", action_probs[RailEnvActions.STOP_MOVING], episode_idx)
-        writer.add_scalar("training/epsilon", eps_start, episode_idx)
-        writer.add_scalar("training/buffer_size", len(policies[0].memory), episode_idx)
+        # writer.add_scalar("training/epsilon", eps_start, episode_idx)
         for agent in train_env.get_agent_handles():
-            writer.add_scalar("training/agent_%d/pi_loss" % agent, policies[agent].pi_loss, episode_idx)
-            writer.add_scalar("training/agent_%d/vf_loss" % agent, policies[agent].vf_loss, episode_idx)
+            writer.add_scalar("agent_%d/buffer_size", len(policies[agent].memory), episode_idx)
+            writer.add_scalar("agent_%d/pi_loss" % agent, policies[agent].pi_loss, episode_idx)
+            writer.add_scalar("agent_%d/vf_loss" % agent, policies[agent].vf_loss, episode_idx)
         writer.add_scalar("timer/reset", reset_timer.get(), episode_idx)
         writer.add_scalar("timer/step", step_timer.get(), episode_idx)
         writer.add_scalar("timer/learn", learn_timer.get(), episode_idx)
@@ -465,10 +468,11 @@ if __name__ == "__main__":
     parser.add_argument("--eps_start", help="max exploration", default=1.0, type=float)
     parser.add_argument("--eps_end", help="min exploration", default=0.01, type=float)
     parser.add_argument("--eps_decay", help="exploration decay", default=0.99, type=float)
-    parser.add_argument("--buffer_size", help="replay buffer size", default=int(1e5), type=int)
+    parser.add_argument("--buffer_size", help="replay buffer size", default=int(2e5), type=int)
     parser.add_argument("--buffer_min_size", help="min buffer size to start training", default=0, type=int)
     parser.add_argument("--restore_replay_buffer", help="replay buffer to restore", default="", type=str)
     parser.add_argument("--save_replay_buffer", help="save replay buffer at each evaluation interval", default=False, type=bool)
+    parser.add_argument("-m", "--mask_memory", help="exclude invalid experience when computing loss", default=False, action="store_true")
     # parser.add_argument("--per", help="prioritized experience replay", default=False, action="store_true")
     # parser.add_argument("--per_alpha", help="alpha parameter for prioritized replay buffer", default=0.6, type=float)
     # parser.add_argument("--per_beta", help="beta parameter for prioritized replay buffer", default=0.4, type=float)

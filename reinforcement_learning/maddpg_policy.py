@@ -8,7 +8,7 @@ import numpy as np
 
 from torch.optim import Adam
 from model import Actor, LocalCritic
-from replay_buffer import ReplayBuffer
+from replay_buffer_with_mask import ReplayBuffer
 from reinforcement_learning.utils.misc import gumbel_softmax, onehot_from_logits
 
 
@@ -71,21 +71,21 @@ class MADDPGPolicy(object):
             action = onehot_from_logits(pi)
         return action
     
-    def update_memory(self, obs, action, reward, next_obs, done):
+    def update_memory(self, obs, action, reward, next_obs, done, mask=True):
         assert not self.evaluation_mode, "Policy has been initialized for evaluation only."
 
         # Save experience in replay memory
-        self.memory.add(obs, action, reward, next_obs, done)
+        self.memory.add(obs, action, reward, next_obs, done, mask)
     
     def learn(self, agents):
         self.t_step = (self.t_step + 1) % self.update_every
         if self.t_step == 0 and len(self.memory) > self.buffer_min_size and len(self.memory) > self.batch_size:
             # Time to learn!
-            idxes = random.sample([i for i in range(len(self.memory))], k=self.batch_size)
+            idxes = self.memory.sample_idxes()
 
             obs_n, act_n, rew_n, next_obs_n, done_n = [], [], [], [], []
             for i in range(self.n_agent):
-                obs, act, rew, next_obs, done = agents[i].memory.get(idxes)
+                obs, act, rew, next_obs, done= agents[i].memory.get(idxes)
                 obs_n.append(obs)
                 act_n.append(act)
                 rew_n.append(rew)
