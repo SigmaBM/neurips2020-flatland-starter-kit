@@ -378,7 +378,7 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
         writer.add_scalar("actions/stop", action_probs[RailEnvActions.STOP_MOVING], episode_idx)
         # writer.add_scalar("training/epsilon", eps_start, episode_idx)
         for agent in train_env.get_agent_handles():
-            writer.add_scalar("agent_%d/buffer_size", len(policies[agent].memory), episode_idx)
+            writer.add_scalar("agent_%d/buffer_size" % agent, len(policies[agent].memory), episode_idx)
             writer.add_scalar("agent_%d/pi_loss" % agent, policies[agent].pi_loss, episode_idx)
             writer.add_scalar("agent_%d/vf_loss" % agent, policies[agent].vf_loss, episode_idx)
         writer.add_scalar("timer/reset", reset_timer.get(), episode_idx)
