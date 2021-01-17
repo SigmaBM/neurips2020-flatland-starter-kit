@@ -85,7 +85,7 @@ class MADDPGPolicy(object):
 
             obs_n, act_n, rew_n, next_obs_n, done_n = [], [], [], [], []
             for i in range(self.n_agent):
-                obs, act, rew, next_obs, done= agents[i].memory.get(idxes)
+                obs, act, rew, next_obs, done = agents[i].memory.get(idxes)
                 obs_n.append(obs)
                 act_n.append(act)
                 rew_n.append(rew)
@@ -93,7 +93,7 @@ class MADDPGPolicy(object):
                 done_n.append(done)
             
             # 1. Update critic
-            next_act_n = [onehot_from_logits(agents[i].target_p(obs_n[i])) for i in range(self.n_agent)]
+            next_act_n = [onehot_from_logits(agents[i].target_p(next_obs_n[i])) for i in range(self.n_agent)]
             next_act_cat = torch.cat(tuple(next_act_n), dim=1)
             # y_i = r_i + gamma * Q_target(o_i, a_1, a_2, ..., a_n) * (1 - treminal_i)
             target_q = rew_n[self.id].view(-1, 1) + self.gamma * self.target_q(next_obs_n[self.id], next_act_cat) * (1 - done_n[self.id].view(-1, 1))
