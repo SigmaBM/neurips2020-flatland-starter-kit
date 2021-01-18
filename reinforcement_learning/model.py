@@ -59,7 +59,7 @@ class LocalCritic(nn.Module):
         self.fc3_q = nn.Linear(hid_size, 1)
 
     def forward(self, obs, acts):
-        q = F.relu(self.fc1_q(torch.cat((obs, acts), dim=1)))
+        q = F.relu(self.fc1_q(torch.cat((obs, acts), dim=-1)))
         q = F.relu(self.fc2_q(q))
         q = self.fc3_q(q)
 
