@@ -176,11 +176,14 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
 
     # TensorBoard writer
     current_time = datetime.now().strftime('%b%d_%H-%M-%S')
-    log_dir = os.path.join(os.path.join('train_log', 'madddqn'), current_time + '_' + socket.gethostname())
+    log_dir = os.path.join(os.path.join(train_params.log_path, 'madddqn'), current_time + '_' + socket.gethostname())
     writer = SummaryWriter(log_dir=log_dir)
-    writer.add_hparams(vars(train_params), {})
-    writer.add_hparams(vars(train_env_params), {})
-    writer.add_hparams(vars(obs_params), {})
+    # writer.add_hparams(vars(train_params), {})
+    # writer.add_hparams(vars(train_env_params), {})
+    # writer.add_hparams(vars(obs_params), {})
+    params_list = [vars(train_params), vars(train_env_params), vars(obs_params)]
+    with open(os.path.join(log_dir, 'params.json'), 'w+') as jfile:
+        jfile.write(json.dumps(params_list, indent=4))
 
     # Make direction for model saving and replay buffer
     checkdir = os.path.join(log_dir, 'checkpoints')
@@ -446,6 +449,7 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--training_env_config", help="training config id (eg 0 for Test_0)", default=0, type=int)
     parser.add_argument("-e", "--evaluation_env_config", help="evaluation config id (eg 0 for Test_0)", default=0, type=int)
     parser.add_argument("-s", "--seed", help="training random seed", default=0, type=int)
+    parser.add_argument("-l", "--log_path", help="path to save training log", default="debug_log", type=str)
     parser.add_argument("--n_evaluation_episodes", help="number of evaluation episodes", default=25, type=int)
     parser.add_argument("--checkpoint_interval", help="checkpoint interval", default=100, type=int)
     parser.add_argument("--eps_start", help="max exploration", default=1.0, type=float)
