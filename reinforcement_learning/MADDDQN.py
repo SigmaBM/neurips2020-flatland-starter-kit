@@ -326,6 +326,7 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
             '\t Done: {:.2f}%'
             '\t Avg: {:.2f}%'
             '\t Epsilon: {:.3f} '
+            '\t Steps: {}'
             '\n Action Probs: {}'.format(
                 episode_idx,
                 normalized_score,
@@ -333,6 +334,7 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
                 100 * completion,
                 100 * smoothed_completion,
                 eps_start,
+                nb_steps,
                 format_action_prob(action_probs)
             ), end=" ")
 
