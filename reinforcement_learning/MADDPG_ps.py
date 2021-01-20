@@ -28,6 +28,7 @@ sys.path.append(str(base_dir))
 
 from utils.timer import Timer
 from utils.observation_utils import normalize_observation
+from reinforcement_learning.maddpg_policy import MADDPGPolicy_LocalCritic_ParamSharing, MADDPGPolicy_GlobalCritic_ParamSharing
 
 # try:
 #     import wandb
@@ -154,10 +155,9 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
 
     # MADDPG policy for all agents
     if train_params.global_critic:
-        from reinforcement_learning.maddpg_policy_ps_gc import MADDPGPolicy
+        policy = MADDPGPolicy_GlobalCritic_ParamSharing(state_size, action_size, n_agents, train_params)
     else:
-        from reinforcement_learning.maddpg_policy_ps_lc import MADDPGPolicy
-    policy = MADDPGPolicy(state_size, action_size, n_agents, train_params)
+        policy = MADDPGPolicy_LocalCritic_ParamSharing(state_size, action_size, n_agents, train_params)
 
     # Loads existing replay buffer
     if restore_replay_buffer:
@@ -179,7 +179,9 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
 
     # TensorBoard writer
     current_time = datetime.now().strftime('%b%d_%H-%M-%S')
-    log_dir = os.path.join(os.path.join(train_params.log_path, 'maddpg_local_tree_ps'), current_time + '_' + socket.gethostname())
+    log_dir = os.path.join(os.path.join(train_params.log_path, 
+                                        'maddpg_ps_t{}_e{}'.format(train_params.training_env_config, train_params.evaluation_env_config)), 
+                           current_time + '_' + socket.gethostname() + '_s' + str(train_params.seed))
     writer = SummaryWriter(log_dir=log_dir)
     # writer.add_hparams(vars(train_params), {})
     # writer.add_hparams(vars(train_env_params), {})

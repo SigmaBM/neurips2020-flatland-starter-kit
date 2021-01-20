@@ -28,7 +28,7 @@ sys.path.append(str(base_dir))
 
 from utils.timer import Timer
 from utils.observation_utils import normalize_observation
-from reinforcement_learning.maddpg_policy import MADDPGPolicy
+from reinforcement_learning.maddpg_policy import MADDPGPolicy_LocalCritic, MADDPGPolicy_GlobalCritic
 
 # try:
 #     import wandb
@@ -157,7 +157,10 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
     smoothed_eval_completion = 0.0
 
     # MADDPG policy for all agents
-    policies = [MADDPGPolicy(state_size, action_size, n_agents, i, train_params) for i in range(n_agents)]
+    if train_params.global_critic:
+        policies = [MADDPGPolicy_GlobalCritic(state_size, action_size, n_agents, i, train_params) for i in range(n_agents)]
+    else:
+        policies = [MADDPGPolicy_LocalCritic(state_size, action_size, n_agents, i, train_params) for i in range(n_agents)]
 
     # Loads existing replay buffer
     if restore_replay_buffer:
@@ -180,7 +183,9 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
 
     # TensorBoard writer
     current_time = datetime.now().strftime('%b%d_%H-%M-%S')
-    log_dir = os.path.join(os.path.join(train_params.log_path, 'maddpg_local_tree_joint'), current_time + '_' + socket.gethostname())
+    log_dir = os.path.join(os.path.join(train_params.log_path, 
+                                        'maddpg_t{}_e{}'.format(train_params.training_env_config, train_params.evaluation_env_config)), 
+                           current_time + '_' + socket.gethostname() + '_s' + str(train_params.seed))
     writer = SummaryWriter(log_dir=log_dir)
     # writer.add_hparams(vars(train_params), {})
     # writer.add_hparams(vars(train_env_params), {})
@@ -477,6 +482,7 @@ if __name__ == "__main__":
     parser.add_argument("--buffer_min_size", help="min buffer size to start training", default=0, type=int)
     parser.add_argument("--restore_replay_buffer", help="replay buffer to restore", default="", type=str)
     parser.add_argument("--save_replay_buffer", help="save replay buffer at each evaluation interval", default=False, type=bool)
+    parser.add_argument("--global_critic", default=False, action='store_true')
     # parser.add_argument("--per", help="prioritized experience replay", default=False, action="store_true")
     # parser.add_argument("--per_alpha", help="alpha parameter for prioritized replay buffer", default=0.6, type=float)
     # parser.add_argument("--per_beta", help="beta parameter for prioritized replay buffer", default=0.4, type=float)
@@ -485,7 +491,8 @@ if __name__ == "__main__":
     parser.add_argument("--gamma", help="discount factor", default=0.99, type=float)
     parser.add_argument("--tau", help="soft update of target parameters", default=1e-3, type=float)
     parser.add_argument("--learning_rate", help="learning rate", default=0.5e-4, type=float)
-    parser.add_argument("--hidden_size", help="hidden size (2 fc layers)", default=256, type=int)
+    parser.add_argument("--p_hidden_size", help="hidden size (2 fc layers)", default=128, type=int)
+    parser.add_argument("--q_hidden_size", help="hidden size (2 fc layers)", default=256, type=int)
     parser.add_argument("--update_every", help="how often to update the network", default=10, type=int)
     parser.add_argument("--use_gpu", help="use GPU if available", default=False, action="store_true")
     parser.add_argument("--num_threads", help="number of threads PyTorch can use", default=1, type=int)
