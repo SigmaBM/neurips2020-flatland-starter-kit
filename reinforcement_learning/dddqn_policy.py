@@ -84,7 +84,7 @@ class DDDQNPolicy(Policy):
         return actions
 
 
-    def step(self, state, action, reward, next_state, done, beta):
+    def step(self, state, action, reward, next_state, done, beta=None):
         assert not self.evaluation_mode, "Policy has been initialized for evaluation only."
 
         # Save experience in replay memory
@@ -97,7 +97,7 @@ class DDDQNPolicy(Policy):
             if len(self.memory) > self.buffer_min_size and len(self.memory) > self.batch_size:
                 self._learn(beta)
 
-    def _learn(self, beta=None):
+    def _learn(self, beta):
         if self.per:
             experiences = self.memory.sample(beta)
             states, actions, rewards, next_states, dones, weights, idxes = experiences

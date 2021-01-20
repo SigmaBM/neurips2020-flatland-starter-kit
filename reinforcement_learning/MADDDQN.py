@@ -384,6 +384,9 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
         writer.add_scalar("timer/inference", inference_timer.get(), episode_idx)
         writer.add_scalar("timer/total", training_timer.get_current(), episode_idx)
 
+        if train_params.per:
+            writer.add_scalar("training/beta", beta_schedule.value(episode_idx), episode_idx)
+
 
 def format_action_prob(action_probs):
     action_probs = np.round(action_probs, 3)
