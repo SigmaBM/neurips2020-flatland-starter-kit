@@ -129,6 +129,7 @@ runs/
 checkpoints/
 train_log/
 debug_log/
+train_log_final/
 
 # Checkpoints and replay buffers
 !checkpoints/.gitkeep

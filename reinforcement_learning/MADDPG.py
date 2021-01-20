@@ -28,7 +28,6 @@ sys.path.append(str(base_dir))
 
 from utils.timer import Timer
 from utils.observation_utils import normalize_observation
-# from reinforcement_learning.dddqn_policy import DDDQNPolicy
 from reinforcement_learning.maddpg_policy import MADDPGPolicy
 
 # try:
@@ -181,7 +180,7 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
 
     # TensorBoard writer
     current_time = datetime.now().strftime('%b%d_%H-%M-%S')
-    log_dir = os.path.join(os.path.join(train_params.log_path, 'maddpg_local_tree'), current_time + '_' + socket.gethostname())
+    log_dir = os.path.join(os.path.join(train_params.log_path, 'maddpg_local_tree_joint'), current_time + '_' + socket.gethostname())
     writer = SummaryWriter(log_dir=log_dir)
     # writer.add_hparams(vars(train_params), {})
     # writer.add_hparams(vars(train_env_params), {})
@@ -267,12 +266,18 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
                 )
 
             # Update replay buffer
+            agent_acts_one_hot = [np.eye(action_size)[agent_prev_action[agent]] for agent in train_env.get_agent_handles()]
+            # act_mask_n = [not info['action_required'][agent] for agent in train_env.get_agent_handles()]
+            act_mask_n = [not update_values[agent] for agent in train_env.get_agent_handles()]
             for agent in train_env.get_agent_handles():
-                agent_action_one_hot = np.eye(action_size)[agent_prev_action[agent]]
-                if train_params.mask_memory:
-                    policies[agent].update_memory(agent_prev_obs[agent], agent_action_one_hot, all_rewards[agent], agent_obs[agent], done[agent], update_values[agent])
-                else:
-                    policies[agent].update_memory(agent_prev_obs[agent], agent_action_one_hot, all_rewards[agent], agent_obs[agent], done[agent])
+                if update_values[agent] or done['__all__']:
+                    policies[agent].update_memory(
+                        np.array(agent_prev_obs), 
+                        np.array(agent_acts_one_hot), 
+                        all_rewards[agent], 
+                        np.array(agent_obs), 
+                        done[agent], 
+                        act_mask_n)
 
             for agent in train_env.get_agent_handles():
                 learn_timer.start()
@@ -468,11 +473,10 @@ if __name__ == "__main__":
     parser.add_argument("--eps_start", help="max exploration", default=1.0, type=float)
     parser.add_argument("--eps_end", help="min exploration", default=0.01, type=float)
     parser.add_argument("--eps_decay", help="exploration decay", default=0.99, type=float)
-    parser.add_argument("--buffer_size", help="replay buffer size", default=int(5e5), type=int)
+    parser.add_argument("--buffer_size", help="replay buffer size", default=int(1e5), type=int)
     parser.add_argument("--buffer_min_size", help="min buffer size to start training", default=0, type=int)
     parser.add_argument("--restore_replay_buffer", help="replay buffer to restore", default="", type=str)
     parser.add_argument("--save_replay_buffer", help="save replay buffer at each evaluation interval", default=False, type=bool)
-    parser.add_argument("-m", "--mask_memory", help="exclude invalid experience when computing loss", default=False, action="store_true")
     # parser.add_argument("--per", help="prioritized experience replay", default=False, action="store_true")
     # parser.add_argument("--per_alpha", help="alpha parameter for prioritized replay buffer", default=0.6, type=float)
     # parser.add_argument("--per_beta", help="beta parameter for prioritized replay buffer", default=0.4, type=float)

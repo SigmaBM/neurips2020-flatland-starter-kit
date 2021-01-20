@@ -28,8 +28,6 @@ sys.path.append(str(base_dir))
 
 from utils.timer import Timer
 from utils.observation_utils import normalize_observation
-# from reinforcement_learning.dddqn_policy import DDDQNPolicy
-from reinforcement_learning.maddpg_policy_ps import MADDPGPolicy
 
 # try:
 #     import wandb
@@ -102,9 +100,6 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
     observation_max_path_depth = obs_params.observation_max_path_depth
 
     # Training parameters
-    eps_start = train_params.eps_start
-    eps_end = train_params.eps_end
-    eps_decay = train_params.eps_decay
     n_episodes = train_params.n_episodes
     checkpoint_interval = train_params.checkpoint_interval
     n_eval_episodes = train_params.n_evaluation_episodes
@@ -158,6 +153,10 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
     smoothed_eval_completion = 0.0
 
     # MADDPG policy for all agents
+    if train_params.global_critic:
+        from reinforcement_learning.maddpg_policy_ps_gc import MADDPGPolicy
+    else:
+        from reinforcement_learning.maddpg_policy_ps_lc import MADDPGPolicy
     policy = MADDPGPolicy(state_size, action_size, n_agents, train_params)
 
     # Loads existing replay buffer
@@ -300,9 +299,6 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
             if done['__all__']:
                 break
 
-        # Epsilon decay
-        eps_start = max(eps_end, eps_decay * eps_start)
-
         # Collect information about training
         tasks_finished = sum(done[idx] for idx in train_env.get_agent_handles())
         completion = tasks_finished / max(1, train_env.get_num_agents())
@@ -331,14 +327,12 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
             '\t Avg: {:.3f}'
             '\t Done: {:.2f}%'
             '\t Avg: {:.2f}%'
-            '\t Epsilon: {:.3f} '
             '\n Action Probs: {}'.format(
                 episode_idx,
                 normalized_score,
                 smoothed_normalized_score,
                 100 * completion,
                 100 * smoothed_completion,
-                eps_start,
                 format_action_prob(action_probs)
             ), end=" ")
 
@@ -380,7 +374,6 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
         writer.add_scalar("actions/forward", action_probs[RailEnvActions.MOVE_FORWARD], episode_idx)
         writer.add_scalar("actions/right", action_probs[RailEnvActions.MOVE_RIGHT], episode_idx)
         writer.add_scalar("actions/stop", action_probs[RailEnvActions.STOP_MOVING], episode_idx)
-        # writer.add_scalar("training/epsilon", eps_start, episode_idx)
         writer.add_scalar("training/buffer_size", len(policy.memory), episode_idx)
         writer.add_scalar("training/pi_loss", policy.pi_loss, episode_idx)
         writer.add_scalar("training/vf_loss", policy.vf_loss, episode_idx)
@@ -466,24 +459,24 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--evaluation_env_config", help="evaluation config id (eg 0 for Test_0)", default=0, type=int)
     parser.add_argument("-s", "--seed", help="training random seed", default=0, type=int)
     parser.add_argument("-l", "--log_path", help="path to save training log", default="debug_log", type=str)
+    parser.add_argument("--load_path", help="path to loas a model", default=None, type=str)
     parser.add_argument("--n_evaluation_episodes", help="number of evaluation episodes", default=25, type=int)
     parser.add_argument("--checkpoint_interval", help="checkpoint interval", default=100, type=int)
-    parser.add_argument("--eps_start", help="max exploration", default=1.0, type=float)
-    parser.add_argument("--eps_end", help="min exploration", default=0.01, type=float)
-    parser.add_argument("--eps_decay", help="exploration decay", default=0.99, type=float)
     parser.add_argument("--buffer_size", help="replay buffer size", default=int(1e5), type=int)
     parser.add_argument("--buffer_min_size", help="min buffer size to start training", default=0, type=int)
     parser.add_argument("--restore_replay_buffer", help="replay buffer to restore", default="", type=str)
     parser.add_argument("--save_replay_buffer", help="save replay buffer at each evaluation interval", default=False, type=bool)
+    parser.add_argument("--global_critic", default=False, action='store_true')
     # parser.add_argument("--per", help="prioritized experience replay", default=False, action="store_true")
     # parser.add_argument("--per_alpha", help="alpha parameter for prioritized replay buffer", default=0.6, type=float)
     # parser.add_argument("--per_beta", help="beta parameter for prioritized replay buffer", default=0.4, type=float)
     # parser.add_argument("--per_eps", help="epsilon to add to the TD errors when updating priorities", default=1e-6, type=float)
-    parser.add_argument("--batch_size", help="minibatch size", default=256, type=int)
+    parser.add_argument("--batch_size", help="minibatch size", default=128, type=int)
     parser.add_argument("--gamma", help="discount factor", default=0.99, type=float)
     parser.add_argument("--tau", help="soft update of target parameters", default=1e-3, type=float)
     parser.add_argument("--learning_rate", help="learning rate", default=0.5e-4, type=float)
-    parser.add_argument("--hidden_size", help="hidden size (2 fc layers)", default=256, type=int)
+    parser.add_argument("--p_hidden_size", help="hidden size (2 fc layers)", default=128, type=int)
+    parser.add_argument("--q_hidden_size", help="hidden size (2 fc layers)", default=256, type=int)
     parser.add_argument("--update_every", help="how often to update the network", default=8, type=int)
     parser.add_argument("--use_gpu", help="use GPU if available", default=False, action="store_true")
     parser.add_argument("--num_threads", help="number of threads PyTorch can use", default=1, type=int)

@@ -7,8 +7,8 @@ import torch.nn as nn
 import numpy as np
 
 from torch.optim import Adam
-from model import Actor, LocalCritic
-from replay_buffer_ps import ReplayBuffer
+from model import Actor, Critic
+from replay_buffer_maddpg_ps import ReplayBuffer
 from reinforcement_learning.utils.misc import gumbel_softmax, onehot_from_logits
 
 
@@ -22,7 +22,8 @@ class MADDPGPolicy(object):
         self.hid_size = 1
 
         if not evaluation_mode:
-            self.hid_size = parameters.hidden_size
+            self.p_hid_size = parameters.p_hidden_size
+            self.q_hid_size = parameters.q_hidden_size
             self.buffer_size = parameters.buffer_size
             self.batch_size = parameters.batch_size
             self.update_every = parameters.update_every
@@ -39,10 +40,14 @@ class MADDPGPolicy(object):
             self.device = torch.device("cpu")
             # print("🐢 Using CPU")
         
-        self.p = Actor(ob_size, ac_size, self.hid_size).to(self.device)
-        self.q = LocalCritic(ob_size, ac_size * n_agent, self.hid_size).to(self.device)
+        self.p = Actor(ob_size, ac_size, self.p_hid_size).to(self.device)
+        self.q = Critic(ob_size * n_agent, ac_size * n_agent, self.q_hid_size).to(self.device)
 
         if not evaluation_mode:
+            if parameters.load_path is not None:
+                self.p = torch.load(parameters.load_path + '-p.pth')
+                self.q = torch.load(parameters.load_path + '-q.pth')
+
             self.target_p = copy.deepcopy(self.p)
             self.target_q = copy.deepcopy(self.q)
 
@@ -93,18 +98,19 @@ class MADDPGPolicy(object):
                 next_act_n[-1][act_mask_n[:, i], 0] = 1
             next_act_cat = torch.cat(tuple(next_act_n), dim=1)
 
-            obs_in, next_obs_in = [], []
+            obs_q_in = torch.reshape(obs_n, [self.batch_size, -1])
+            next_obs_q_in = torch.reshape(next_obs_n, [self.batch_size, -1])
+
+            obs_p_in = []
             for i in range(self.batch_size):
-                obs_in.append(obs_n[i, agent_ids[i], :])
-                next_obs_in.append(next_obs_n[i, agent_ids[i], :])
-            obs_in = torch.stack(obs_in, dim=0)
-            next_obs_in = torch.stack(next_obs_in, dim=0)
+                obs_p_in.append(obs_n[i, agent_ids[i], :])
+            obs_p_in = torch.stack(obs_p_in, dim=0)
 
             # y_i = r_i + gamma * Q_target(o_i, a_1, a_2, ..., a_n) * (1 - treminal_i)
-            target_q = rewards.view(-1, 1) + self.gamma * self.target_q(next_obs_in, next_act_cat) * (1 - dones.view(-1, 1))
+            target_q = rewards.view(-1, 1) + self.gamma * self.target_q(next_obs_q_in, next_act_cat) * (1 - dones.view(-1, 1))
 
             act_cat = torch.reshape(act_n, [self.batch_size, -1])
-            q = self.q(obs_in, act_cat)
+            q = self.q(obs_q_in, act_cat)
             self.vf_loss = torch.nn.MSELoss()(q, target_q)
 
             self.q_optimizer.zero_grad()
@@ -113,12 +119,12 @@ class MADDPGPolicy(object):
             self.q_optimizer.step()
 
             # 2. Update actor
-            pi = self.p(obs_in)
+            pi = self.p(obs_p_in)
             act = gumbel_softmax(pi, hard=True)
             for i in range(self.batch_size):
                 act_n[i, agent_ids[i], :] = act[i, :]
             act_cat = torch.reshape(act_n, [self.batch_size, -1])
-            pg_loss = -self.q(obs_in, act_cat).mean()
+            pg_loss = -self.q(obs_q_in, act_cat).mean()
 
             p_reg = (pi**2).mean()
             self.pi_loss = pg_loss + p_reg * 1e-3

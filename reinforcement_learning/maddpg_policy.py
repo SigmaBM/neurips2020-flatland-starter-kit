@@ -7,8 +7,8 @@ import torch.nn as nn
 import numpy as np
 
 from torch.optim import Adam
-from model import Actor, LocalCritic
-from replay_buffer_with_mask import ReplayBuffer
+from model import Actor, Critic
+from replay_buffer_maddpg import ReplayBuffer
 from reinforcement_learning.utils.misc import gumbel_softmax, onehot_from_logits
 
 
@@ -41,7 +41,7 @@ class MADDPGPolicy(object):
             # print("🐢 Using CPU")
         
         self.p = Actor(ob_size, ac_size, self.hid_size).to(self.device)
-        self.q = LocalCritic(ob_size, ac_size * n_agent, self.hid_size).to(self.device)
+        self.q = Critic(ob_size, ac_size * n_agent, self.hid_size).to(self.device)
 
         if not evaluation_mode:
             self.target_p = copy.deepcopy(self.p)
@@ -71,35 +71,33 @@ class MADDPGPolicy(object):
             action = onehot_from_logits(pi)
         return action
     
-    def update_memory(self, obs, action, reward, next_obs, done, mask=True):
+    def update_memory(self, obs, action, reward, next_obs, done, act_mask):
         assert not self.evaluation_mode, "Policy has been initialized for evaluation only."
 
         # Save experience in replay memory
-        self.memory.add(obs, action, reward, next_obs, done, mask)
+        self.memory.add(obs, action, reward, next_obs, done, act_mask)
     
     def learn(self, agents):
         self.t_step = (self.t_step + 1) % self.update_every
         if self.t_step == 0 and len(self.memory) > self.buffer_min_size and len(self.memory) > self.batch_size:
             # Time to learn!
             idxes = self.memory.sample_idxes()
-
-            obs_n, act_n, rew_n, next_obs_n, done_n = [], [], [], [], []
-            for i in range(self.n_agent):
-                obs, act, rew, next_obs, done = agents[i].memory.get(idxes)
-                obs_n.append(obs)
-                act_n.append(act)
-                rew_n.append(rew)
-                next_obs_n.append(next_obs)
-                done_n.append(done)
+            
+            obs_n, act_n, rewards, next_obs_n, dones, act_mask_n = self.memory.get(idxes)
             
             # 1. Update critic
-            next_act_n = [onehot_from_logits(agents[i].target_p(next_obs_n[i])) for i in range(self.n_agent)]
+            next_act_n = []
+            for i in range(self.n_agent):
+                next_act_n.append(onehot_from_logits(agents[i].target_p(next_obs_n[:, i, :])))
+                # next_act_n[-1][act_mask_n[:, i]] = torch.from_numpy(np.eye(self.ac_size)[0]).float().to(self.device)  # Set invalid action to 0
+                next_act_n[-1][act_mask_n[:, i], :] = 0
+                next_act_n[-1][act_mask_n[:, i], 0] = 1
             next_act_cat = torch.cat(tuple(next_act_n), dim=1)
             # y_i = r_i + gamma * Q_target(o_i, a_1, a_2, ..., a_n) * (1 - treminal_i)
-            target_q = rew_n[self.id].view(-1, 1) + self.gamma * self.target_q(next_obs_n[self.id], next_act_cat) * (1 - done_n[self.id].view(-1, 1))
+            target_q = rewards.view(-1, 1) + self.gamma * self.target_q(next_obs_n[:, self.id, :], next_act_cat) * (1 - dones.view(-1, 1))
 
-            act_cat = torch.cat(tuple(act_n), dim=1)
-            q = self.q(obs_n[self.id], act_cat)
+            act_cat = torch.reshape(act_n, [self.batch_size, -1])
+            q = self.q(obs_n[:, self.id, :], act_cat)
             self.vf_loss = torch.nn.MSELoss()(q, target_q)
 
             self.q_optimizer.zero_grad()
@@ -108,11 +106,11 @@ class MADDPGPolicy(object):
             self.q_optimizer.step()
 
             # 2. Update actor
-            pi = self.p(obs_n[self.id])
+            pi = self.p(obs_n[:, self.id, :])
             act = gumbel_softmax(pi, hard=True)
-            act_n[self.id] = act
-            act_cat = torch.cat(tuple(act_n), dim=1)
-            pg_loss = -self.q(obs_n[self.id], act_cat).mean()
+            act_n[:, self.id, :] = act
+            act_cat = torch.reshape(act_n, [self.batch_size, -1])
+            pg_loss = -self.q(obs_n[:, self.id, :], act_cat).mean()
 
             p_reg = (pi**2).mean()
             self.pi_loss = pg_loss + p_reg * 1e-3

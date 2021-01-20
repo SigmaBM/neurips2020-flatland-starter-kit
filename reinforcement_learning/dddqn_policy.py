@@ -35,7 +35,6 @@ class DDDQNPolicy(Policy):
             self.buffer_min_size = parameters.buffer_min_size
             self.per = parameters.per   # Prioritized experience replay
             self.alpha = parameters.per_alpha
-            self.beta = parameters.per_beta
             self.eps = parameters.per_eps
 
         # Device
@@ -50,6 +49,8 @@ class DDDQNPolicy(Policy):
         self.qnetwork_local = DuelingQNetwork(state_size, action_size, hidsize1=self.hidsize, hidsize2=self.hidsize).to(self.device)
 
         if not evaluation_mode:
+            if parameters.load_path is not None:
+                self.qnetwork_local = torch.load(parameters.load_path)
             self.qnetwork_target = copy.deepcopy(self.qnetwork_local)
             self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=self.learning_rate)
             if self.per:
@@ -83,7 +84,7 @@ class DDDQNPolicy(Policy):
         return actions
 
 
-    def step(self, state, action, reward, next_state, done):
+    def step(self, state, action, reward, next_state, done, beta):
         assert not self.evaluation_mode, "Policy has been initialized for evaluation only."
 
         # Save experience in replay memory
@@ -94,11 +95,11 @@ class DDDQNPolicy(Policy):
         if self.t_step == 0:
             # If enough samples are available in memory, get random subset and learn
             if len(self.memory) > self.buffer_min_size and len(self.memory) > self.batch_size:
-                self._learn()
+                self._learn(beta)
 
-    def _learn(self):
+    def _learn(self, beta=None):
         if self.per:
-            experiences = self.memory.sample(self.beta)
+            experiences = self.memory.sample(beta)
             states, actions, rewards, next_states, dones, weights, idxes = experiences
         else:
             experiences = self.memory.sample()

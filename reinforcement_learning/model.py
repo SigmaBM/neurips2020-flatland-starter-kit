@@ -50,7 +50,7 @@ class Actor(nn.Module):
         return pi
 
 
-class LocalCritic(nn.Module):
+class Critic(nn.Module):
     def __init__(self, ob_size, ac_size, hid_size=128):
         super().__init__()
 

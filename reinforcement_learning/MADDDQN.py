@@ -29,6 +29,7 @@ sys.path.append(str(base_dir))
 from utils.timer import Timer
 from utils.observation_utils import normalize_observation
 from reinforcement_learning.dddqn_policy import DDDQNPolicy
+from reinforcement_learning.utils.schedules import LinearSchedule
 
 # try:
 #     import wandb
@@ -204,6 +205,9 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
         training_id
     ))
 
+    if train_params.per:
+        beta_schedule = LinearSchedule(n_episodes, initial_p=train_params.per_beta, final_p=1.0)
+
     for episode_idx in range(n_episodes + 1):
         step_timer = Timer()
         reset_timer = Timer()
@@ -267,7 +271,12 @@ def train_agent(train_params, train_env_params, eval_env_params, obs_params):
                 if update_values[agent] or done['__all__']:
                     # Only learn from timesteps where somethings happened
                     learn_timer.start()
-                    policy.step(agent_prev_obs[agent], agent_prev_action[agent], all_rewards[agent], agent_obs[agent], done[agent])
+                    if train_params.per:
+                        policy.step(agent_prev_obs[agent], agent_prev_action[agent], all_rewards[agent], agent_obs[agent], 
+                                    done[agent], beta_schedule.value(episode_idx))
+                    else:
+                        policy.step(agent_prev_obs[agent], agent_prev_action[agent], all_rewards[agent], agent_obs[agent], 
+                                    done[agent])
                     learn_timer.end()
 
                     agent_prev_obs[agent] = agent_obs[agent].copy()
@@ -451,6 +460,7 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--evaluation_env_config", help="evaluation config id (eg 0 for Test_0)", default=0, type=int)
     parser.add_argument("-s", "--seed", help="training random seed", default=0, type=int)
     parser.add_argument("-l", "--log_path", help="path to save training log", default="debug_log", type=str)
+    parser.add_argument("--load_path", help="path to loas a model", default=None, type=str)
     parser.add_argument("--n_evaluation_episodes", help="number of evaluation episodes", default=25, type=int)
     parser.add_argument("--checkpoint_interval", help="checkpoint interval", default=100, type=int)
     parser.add_argument("--eps_start", help="max exploration", default=1.0, type=float)
