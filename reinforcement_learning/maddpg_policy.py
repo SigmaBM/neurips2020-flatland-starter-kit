@@ -7,8 +7,8 @@ import torch.nn as nn
 import numpy as np
 
 from torch.optim import Adam
-from model import Actor, Critic
-from replay_buffer_maddpg import ReplayBuffer, ReplayBufferParamSharing
+from reinforcement_learning.model import Actor, Critic
+from reinforcement_learning.replay_buffer_maddpg import ReplayBuffer, ReplayBufferParamSharing
 from reinforcement_learning.utils.misc import gumbel_softmax, onehot_from_logits
 
 
@@ -21,6 +21,8 @@ class MADDPGPolicy_LocalCritic(object):
         self.id = idx
         self.n_agent = n_agent
         self.hid_size = 1
+        self.p_hid_size = 128
+        self.q_hid_size = 128
 
         if not evaluation_mode:
             self.p_hid_size = parameters.p_hidden_size
@@ -335,8 +337,8 @@ class MADDPGPolicy_LocalCritic_ParamSharing(object):
 
         if not evaluation_mode:
             if parameters.load_path is not None:
-                self.p = torch.load(parameters.load_path + '-p.pth')
-                self.q = torch.load(parameters.load_path + '-q.pth')
+                self.p = torch.load(parameters.load_path + '-p.pth').to(self.device)
+                self.q = torch.load(parameters.load_path + '-q.pth').to(self.device)
 
             self.target_p = copy.deepcopy(self.p)
             self.target_q = copy.deepcopy(self.q)

@@ -10,7 +10,7 @@ import torch.optim as optim
 
 from reinforcement_learning.model import DuelingQNetwork
 from reinforcement_learning.policy import Policy
-from replay_buffer import ReplayBuffer, PrioritizedReplayBuffer
+from reinforcement_learning.replay_buffer import ReplayBuffer, PrioritizedReplayBuffer
 
 
 class DDDQNPolicy(Policy):
@@ -50,7 +50,7 @@ class DDDQNPolicy(Policy):
 
         if not evaluation_mode:
             if parameters.load_path is not None:
-                self.qnetwork_local = torch.load(parameters.load_path)
+                self.qnetwork_local = torch.load(parameters.load_path).to(self.device)
             self.qnetwork_target = copy.deepcopy(self.qnetwork_local)
             self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=self.learning_rate)
             if self.per:

@@ -21,6 +21,8 @@ sys.path.append(str(base_dir))
 from reinforcement_learning.dddqn_policy import DDDQNPolicy
 from utils.observation_utils import normalize_observation
 
+os.environ['AICROWD_TESTS_FOLDER'] = './scratch/test-neurips2020-round1-v1'
+
 ####################################################
 # EVALUATION PARAMETERS
 
@@ -28,7 +30,10 @@ from utils.observation_utils import normalize_observation
 VERBOSE = True
 
 # Checkpoint to use (remember to push it!)
-checkpoint = "checkpoints/sample-checkpoint.pth"
+# DDDQN model path:
+checkpoint = "train_log_final/madddqn_t0_e0/Jan19_19-53-52_Idiot/checkpoints/210119195350-4000.pth" 
+# DDDQN+PER model path:
+# checkpoint = "train_log_final/madddqn_t0_e0/Jan20_01-20-07_Idiot/checkpoints/210120012006-4000.pth"
 
 # Use last action cache
 USE_ACTION_CACHE = True
@@ -55,7 +60,7 @@ action_size = 5
 policy = DDDQNPolicy(state_size, action_size, Namespace(**{'use_gpu': False}), evaluation_mode=True)
 
 if os.path.isfile(checkpoint):
-    policy.qnetwork_local = torch.load(checkpoint)
+    policy.qnetwork_local = torch.load(checkpoint).to(policy.device)
 else:
     print("Checkpoint not found, using untrained policy! (path: {})".format(checkpoint))
 
@@ -132,7 +137,7 @@ while True:
                         else:
                             # otherwise, run normalization and inference
                             norm_obs = normalize_observation(observation[agent], tree_depth=observation_tree_depth, observation_radius=observation_radius)
-                            action = policy.act(norm_obs, eps=0.0)
+                            action = policy.act(norm_obs[None, :], eps=0.0)[0]
 
                         action_dict[agent] = action
 

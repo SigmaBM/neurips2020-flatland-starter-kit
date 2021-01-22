@@ -45,8 +45,8 @@ class MADDPGPolicy(object):
 
         if not evaluation_mode:
             if parameters.load_path is not None:
-                self.p = torch.load(parameters.load_path + '-p.pth')
-                self.q = torch.load(parameters.load_path + '-q.pth')
+                self.p = torch.load(parameters.load_path + '-p.pth').to(self.device)
+                self.q = torch.load(parameters.load_path + '-q.pth').to(self.device)
 
             self.target_p = copy.deepcopy(self.p)
             self.target_q = copy.deepcopy(self.q)
