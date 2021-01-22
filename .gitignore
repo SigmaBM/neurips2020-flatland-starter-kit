@@ -141,3 +141,6 @@ replay_buffers/*
 
 # wandb
 wandb/
+
+*.pdf
+*.png
